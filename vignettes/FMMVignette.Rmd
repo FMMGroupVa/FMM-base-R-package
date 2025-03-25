@@ -1,7 +1,7 @@
 ---
 title: "FMM Vignette"
 
-author: "Itziar Fernández, Alejandro Rodríguez-Collado, Yolanda Larriba, Adrián Lamela, Christian Canedo, Cristina Rueda"
+author: "Itziar Fernández, Yolanda Larriba, Christian Canedo, Alejandro Rodríguez-Collado, Adrián Lamela, Cristina Rueda"
 
 date: "`r Sys.Date()`"
 
@@ -40,7 +40,7 @@ sum of waves. The main goal of this package is to implement all required functio
 
 Examples of real-word biological oscillations are also included to illustrate the potential of this new methodology. 
 
-Please visit the [FMM Project website](http://www.eio.uva.es/fmm-project/) for complete and up-to-date information on the progress made on the FMM approach.
+Please visit the [FMM Project website](https://www.eio.uva.es/the-fmm-project/) for complete and up-to-date information on the progress made on the FMM approach.
 
 
 # Getting starting
@@ -50,7 +50,7 @@ Please visit the [FMM Project website](http://www.eio.uva.es/fmm-project/) for c
 install.packages("FMM")
 ```
 
-The R source code is also provided via the GitHub repository at [https://github.com/FMMGroupVa/FMM](https://github.com/FMMGroupVa/FMM). To install this development version enter:
+The R source code is also provided via the GitHub repository at [https://github.com/FMMGroupVa/FMM-base-R-package](https://github.com/FMMGroupVa/FMM-base-R-package). To install this development version enter:
 ```{r eval=FALSE}
 install.packages("devtools")
 devtools::install_github("FMMGroupVa/FMM")
@@ -113,7 +113,7 @@ The FMM approach can be useful to analyze oscillatory signals from different dis
 
 The `FMM` package includes four real-world example datasets, in `RData` format, which illustrate the use of this package on the analysis of real signals from these areas. Bellow is a brief description of each of them. 
 
-- **`mouseGeneExp`**. The `mouseGeneExp` data set contains expression data of the *Iqgap2* gene from mouse liver. Gene expression values are collected along two periods of $24$ hours. Samples are pooled and analyzed using Affymetrix arrays. The complete database is freely available at [NCBI GEO](https://www.ncbi.nlm.nih.gov/geo/), with GEO accession number GSE11923.
+- **`mouseGeneExp`**. The `mouseGeneExp` data set contains expression data of the *Iqgap2* gene from mouse liver. Gene expression values are collected along two periods of $24$ hours. Samples are pooled and analyzed using Affymetrix arrays. The complete database is freely available at NCBI GEO, with GEO accession number GSE11923.
 
 - **`ecgData`**. The `ecgData` data set contains the voltage of the heart’s electric activity, measured in mV, from the patient *sel100* of QT database (@Lag1997). The data illustrate the typical ECG signal heartbeat from a healthy subject. Specifically, the ECG signal contained in this dataset corresponds to lead II in the fifth of the thirty annotated heartbeats. Recordings are publicly available on [Physionet website](https://www.physionet.org/).
 
@@ -133,7 +133,15 @@ For a detailed background on methodology, computational algorithms and diverse a
 | @Rod21a                           | Hodgkin-Huxley model representation using a particular restricted FMM model.|
 | @Rod21b                           | The potential of FMM features to classify neurons.                          |
 | @Lar21                            | The potential of FMM to solve problems in chronobiology.                    |
-| @Fer21                            | The R package that allows implementing the model.                           |
+| @Fer22                            | The R package that allows implementing the model.                           |
+| @rueda2022compelling              | Potential of FMM features to construct diagnostic rules from the 
+                                      electrocardiogram signal.                                                   |
+| @rueda2022unique                  | Multidimensional multicomponent FMM model.                                  |
+| @rueda2023functional              | MixFMM models for clustering oscillatory functional data.                   |
+| @larriba2023circust               | FMM models for estimating rhythmicity parameters.                           |
+| @larriba2023modelling             | FMM models for analyzing rhythms in heart rate variability.                 |
+| @canedo2023novel                  | FMM models for analyzing pattern electroretinogram signals.                 |
+| @fernandez2025functional          | Inferential procedures for the parameters of FMM models, signals, and their derivatives.|
                                
 
 # FMM usage
@@ -222,7 +230,7 @@ getFMMPeaks(fit.fmm2, timePointsIn2pi = TRUE)
 #### FMM wave estimation
 To solve the estimation problem of a FMM wave a two-way grid search over the choice of the $(\alpha, \omega)$ parameters is performed. Then, for each pair of $(\alpha, \omega)$ fixed values, the estimates for $M$, $A$ and $\beta$ are obtained by solving a least square problem. 
 
-The `lengthAlphaGrid` and `lengthOmegaGrid` arguments are used to set the grid resolution by specifying the number of equally spaced $\alpha$ and $\omega$ values. When both arguments are large, the computational demand can be high. The algorithm will be computationally more efficient by reducing the size of the sequences of the $\alpha$ and $\omega$ parameters and repeating the fitting process a `numReps` of times, in such a way that, at each repetition, a new two-dimensional grid of $(\alpha, \omega)$ points is created around the previous estimates. 
+The `lengthAlphaGrid` and `lengthOmegaGrid` arguments are used to set the grid resolution by specifying the number of equally spaced $\alpha$ and $\omega$ values. When both arguments are large, the computational demand can be high. The algorithm will be computationally more efficient by reducing the size of the sequences of the $\alpha$ and $\omega$ parameters. 
 
 The example code below shows two different configurations of the arguments `lengthAlphaGrid`, `lengthOmegaGrid` and `numReps` to estimated the previously simulated `fmm2.data`. 
 ```{r}
@@ -234,7 +242,7 @@ getR2(fit1)
 getR2(fit2)
 
 ```
-By combining the value of these arguments of `fitFMM()` a balance between computational cost and the accuracy of estimates has been achieved. The execution time has been reduced considerably by setting shorter sequences for both `lengthAlphaGrid` and `lengthOmegaGrid` arguments, and increasing the number of repetitions from $3$ to $6$. Note that both configurations achieve the same accuracy.
+
 
 #### FMM$_m$ model estimation
 A backfitting algorithm is used for the estimation of the multicomponent models. 
@@ -300,8 +308,6 @@ summary(fit.rfmm)
 
 ### Additional arguments of `fitFMM()` function
 - **`nPeriods`**. For some applications, data are collected over multiple periods. This information is received by the `fitFMM()` function through the input argument `nPeriods`. When `nPeriods>1`, the FMM fitting is carried out by averaging the data collected at each time point across all considered periods.
-
-- **`parallelize`**. When `parallelize = TRUE` a parallel processing implementation is used for better performance.
 
 - **`restrExactSolution`**. When the argument `restrExactSolution = FALSE` the $\omega$ parameters of the restricted version will be estimated by a two-nested backfitting algorithm. Otherwise, the optimal solution for the restricted fitting, computationally more intensive, will be obtain. 
 
