@@ -1,26 +1,45 @@
+
+# FMM 0.4.1
+
+Enhancements:
+
+- Improved convergence speed of the backfitting algorithm, requiring fewer iterations to reach a critical solution.
+
+Changes:
+
+- Fixed bugs related to the ‘omegaGrid’ and ‘omegaMin’ arguments.
+
+- Internal functions for better structure and maintainability:
+    - `mobius()` function needed for the backfitting algorithm.
+    - Introduced `calculateDesignMatrix()` and `calculateSingleCosPhi()` for cleaner and more efficient code.
+
 # FMM 0.4.0
 
 Enhancements:
 
-- **Significant computation time reduction**: The grid search is performed without redundant calculus, and the profile likelihood approach is implemented in the post-optimization procedure, which ensures a faster convergence to a local optimum. These changes make the parallelization (`parallelize` argument) and the iterative refinement of the grid (`numReps` argument) useless.
+- Improved computational efficiency: The grid search has been optimized to avoid redundant calculations, and a profile likelihood approach has been incorporated into the post-optimization procedure. These refinements lead to a more efficient convergence, reducing the need for explicit parallelization (parallelize argument) and iterative grid refinement (numReps argument).
 
-- **`plotFMM` improvements**: Bug fixes and predictions now computed on a denser, evenly spaced grid, in addition to the original time points.
+- Refinements in `plotFMM()`: Bug fixes and improvements in prediction computation, now performed on a denser, evenly spaced grid in addition to the original time points.
 
-- **Cleaner, more efficient code:** Deprecated numReps and parallelize arguments. Default value of showProgress changed from TRUE to FALSE.
+- Code simplifications: The arguments `numReps` and `parallelize` have been deprecated, and the default value of `showProgress` has been changed from `TRUE` to `FALSE`.
 
 New features:
 
-- **Extended fitFMM arguments:** New parameters: omegaMin, omegaMax, and omegaGrid.
+- Additional arguments in `fitFMM()`: New arguments `omegaMin`, `omegaMax`, and `omegaGrid` have been added to provide more flexibility.
 
-- **New warnings added:** for excessively large amplitude estimates and significantly wide gaps in time points.
+- New warnings messages: Additional warnings notify users about excessively large amplitude estimates and significant gaps in time points.
 
 Changes:
 
--  **Repository**: The link to the GitHub repository (`DESCRIPTION` file) has been changed to repo *FMMGroupVa/FMM*.
+-  Repository update: The GitHub repository link in DESCRIPTION has been updated to FMMGroupVa/FMM.
 
--  **Vignettes**: The vignette has been updated as a result of the changes.
+-  Vignette updates: The vignette has been revised to align with the latest modifications.
 
--  **Internal functions**: Functions `bestStep1`, `getApply` are moved from `FMM_internal` to `FMM_internal_restr`. The old version of `step1FMM` have been renamed as `step1FMMRestr` and also moved `FMM_internal_restr`. New internal functions `checkArguments` and `checkSolution` to validate input parameters and verify the correctness of computed results.
+-  Internal functions restructuring: 
+    - Functions `bestStep1()` and `getApply()` have been relocated from FMM_internal to FMM_internal_restr.
+    - The previous version of `step1FMM()` has been renamed step1FMMRestr() and moved to FMM_internal_restr.
+    - Two new internal functions, `checkArguments()` and `checkSolution()`, have been introduced to improve input validation and ensure the correctness of computed results.
+ 
 
 # FMM 0.3.1
 

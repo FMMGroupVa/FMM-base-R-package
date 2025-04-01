@@ -1,7 +1,7 @@
 Package: FMM
 Type: Package
 Title: Rhythmic Patterns Modeling by FMM Models
-Version: 0.3.1
+Version: 0.4.1
 Author: Itziar Fernandez, Alejandro Rodriguez-Collado, Yolanda Larriba, Adrian Lamela, Christian Canedo, Cristina Rueda
 Maintainer: Itziar Fernandez <itziar.fernandez@uva.es>
 Description: Provides a collection of functions to fit and explore single, multi-component and restricted Frequency Modulated Moebius (FMM) models. 'FMM' is a nonlinear parametric regression model capable of fitting non-sinusoidal shapes in rhythmic patterns. Details about the mathematical formulation of 'FMM' models can be found in Rueda et al. (2019) <doi:10.1038/s41598-019-54569-1>.
@@ -13,6 +13,7 @@ Depends: R (>= 3.5)
 Imports: 
     methods,
     rlang,
+    gsignal,
     foreach,
     iterators,
     parallel,
