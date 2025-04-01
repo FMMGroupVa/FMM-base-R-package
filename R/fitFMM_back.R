@@ -46,96 +46,143 @@ fitFMM_back<-function(vData, nback, timePoints = seqTimes(length(vData)),
     previousPercentage <- completedPercentage
   }
 
+  alpha <- rep(NA, nback)
+  omega <- rep(NA, nback)
+  beta <- rep(NA, nback)
+  A <- rep(NA, nback)
+
   # Object initialization.
-  fittedValuesPerComponent <- matrix(rep(0, nObs*nback), ncol = nback)
-  fittedFMMPerComponent <- list()
   prevFittedFMMvalues <- NULL
   stopCriteria <- "Stopped by reaching maximum iterations ("
+  nIter <- 1
 
-  # Backfitting algorithm: iteration
-  for(i in 1:maxiter){
-    # Backfitting algorithm: component
-    for(j in 1:nback){
-      # data for component j: difference between vData and all other components fitted values
-      backFittingData <- vData - apply(as.matrix(fittedValuesPerComponent[,-j]), 1, sum)
-      # component j fitting using fitFMM_unit function
-      fittedFMMPerComponent[[j]] <- fitFMM_unit(backFittingData, timePoints = timePoints, lengthAlphaGrid = lengthAlphaGrid,
-                                                lengthOmegaGrid = lengthOmegaGrid, alphaGrid = alphaGrid, omegaMin = omegaMin,
-                                                omegaMax = omegaMax, omegaGrid = omegaGrid, gridList = gridList)
-      fittedValuesPerComponent[,j] <- getFittedValues(fittedFMMPerComponent[[j]])
-      # showProgress
-      if(showProgress){
-        completedPercentage <- completedPercentage + 100/(nback*maxiter)
-        if(ceiling(previousPercentage) < floor(completedPercentage)){
-          progressDone <- paste(rep("=",sum((seq(ceiling(previousPercentage), floor(completedPercentage), by = 1)
-                                             %% partialMarkLength == 0))), collapse = "")
-          cat(progressDone)
-          previousPercentage <- completedPercentage
-        }
-      }
-    }
+  blaschkeProduct <- rep(1,nObs) # Neutral for product
+  backFittingData <- vData
 
-    # Check stop criterion
-    # Fitted values as sum of all components
-    fittedFMMvalues <- apply(fittedValuesPerComponent, 1, sum)
+  # First Iteration
+  for(j in 1:nback){
+    # component j fitting using fitFMM_unit function
+    fittedFMM <- fitFMM_unit(backFittingData, timePoints = timePoints, lengthAlphaGrid = lengthAlphaGrid,
+                             lengthOmegaGrid = lengthOmegaGrid, alphaGrid = alphaGrid, omegaMin = omegaMin,
+                             omegaMax = omegaMax, omegaGrid = omegaGrid, gridList = gridList)
+    alpha[j] <- fittedFMM@alpha; omega[j] <- fittedFMM@omega
+    aj <- (1-fittedFMM@omega)/(1+fittedFMM@omega) * exp(1i*(fittedFMM@alpha+pi))
 
-    if(!is.null(prevFittedFMMvalues)){
-      if(PV(vData, prevFittedFMMvalues) > PV(vData, fittedFMMvalues)){
-        fittedFMMPerComponent <- previousFittedFMMPerComponent
-        fittedFMMvalues <- prevFittedFMMvalues
-        stopCriteria <- "Stopped by reaching maximum R2 ("
-        break
-      }
-      if(stopFunction(vData, fittedFMMvalues, prevFittedFMMvalues)){
-        stopCriteria <- "Stopped by the stopFunction ("
-        break
-      }
-    }
-    prevFittedFMMvalues <- fittedFMMvalues
-    previousFittedFMMPerComponent <- fittedFMMPerComponent
-  }
-  nIter <- i
+    backFittingData <- Re(gsignal::hilbert(backFittingData - getFittedValues(fittedFMM)) / mobius(aj, timePoints))
+    blaschkeProduct <- blaschkeProduct * mobius(aj, timePoints)
 
-  # showProgress
-  if(showProgress){
-    if(completedPercentage < 100){
-      completedPercentage <- 100
-      nMarks <- ifelse(ceiling(previousPercentage) < floor(completedPercentage),
-                       sum((seq(ceiling(previousPercentage),
-                                floor(completedPercentage), by = 1) %% partialMarkLength == 0)), 0)
-      if (nMarks > 0) {
-        cat(paste(rep("=",nMarks), collapse = ""))
+    # showProgress
+    if(showProgress){
+      completedPercentage <- completedPercentage + 100/(nback*maxiter)
+      if(ceiling(previousPercentage) < floor(completedPercentage)){
+        progressDone <- paste(rep("=",sum((seq(ceiling(previousPercentage), floor(completedPercentage), by = 1)
+                                           %% partialMarkLength == 0))), collapse = "")
+        cat(progressDone)
         previousPercentage <- completedPercentage
       }
     }
-    cat("|\n", paste(stopCriteria, nIter, sep = ""),"iteration(s))","\n")
+  }
+  DM <- calculateDesignMatrix(alpha = alpha, omega = omega, timePoints = timePoints)
+  prevFittedFMMvalues <- as.numeric(DM %*% qr.solve(DM, vData))
+
+  # Backfitting algorithm: iteration (only if maxiter > 1)
+  if(maxiter>1){
+    for(i in 2:maxiter){
+      # Backfitting algorithm: component
+      for(j in 1:nback){
+        # Standard residuals.
+        DM <- calculateDesignMatrix(alpha = alpha[-j], omega = omega[-j], timePoints = timePoints)
+        fittedFMMvalues <- as.numeric(DM %*% qr.solve(DM, vData))
+        stdResiduals <- vData - fittedFMMvalues
+
+        # Transformed standard residuals (Blaschke product).
+        aj <- (1-omega[j])/(1+omega[j]) * exp(1i*(alpha[j]+pi))
+        blaschkeProduct <- blaschkeProduct / mobius(aj, timePoints)
+        backFittingData <- Re(gsignal::hilbert(stdResiduals)/blaschkeProduct)
+
+        # component j fitting using fitFMM_unit function
+        fittedFMM <- fitFMM_unit(backFittingData, timePoints = timePoints, lengthAlphaGrid = lengthAlphaGrid,
+                                                  lengthOmegaGrid = lengthOmegaGrid, alphaGrid = alphaGrid, omegaMin = omegaMin,
+                                                  omegaMax = omegaMax, omegaGrid = omegaGrid, gridList = gridList)
+        # Update Blaschke product
+        alpha[j] <- fittedFMM@alpha; omega[j] <- fittedFMM@omega
+        aj <- (1-omega[j])/(1+omega[j]) * exp(1i*(alpha[j]+pi))
+        blaschkeProduct <- blaschkeProduct * mobius(aj, timePoints)
+
+        # showProgress
+        if(showProgress){
+          completedPercentage <- completedPercentage + 100/(nback*maxiter)
+          if(ceiling(previousPercentage) < floor(completedPercentage)){
+            progressDone <- paste(rep("=",sum((seq(ceiling(previousPercentage), floor(completedPercentage), by = 1)
+                                               %% partialMarkLength == 0))), collapse = "")
+            cat(progressDone)
+            previousPercentage <- completedPercentage
+          }
+        }
+      }
+
+      # Check stop criterion
+      # Fitted values as sum of all components
+      DM <- calculateDesignMatrix(alpha = alpha, omega = omega, timePoints = timePoints)
+      fittedFMMvalues <- as.numeric(DM %*% qr.solve(DM, vData))
+
+      if(!is.null(prevFittedFMMvalues)){
+        if(PV(vData, prevFittedFMMvalues) > PV(vData, fittedFMMvalues)){
+          fittedFMMvalues <- prevFittedFMMvalues
+          stopCriteria <- "Stopped by reaching maximum R2 ("
+          break
+        }
+        if(stopFunction(vData, fittedFMMvalues, prevFittedFMMvalues)){
+          stopCriteria <- "Stopped by the stopFunction ("
+          break
+        }
+      }
+      prevFittedFMMvalues <- fittedFMMvalues
+    }
+    nIter <- i
+
+    # showProgress
+    if(showProgress){
+      if(completedPercentage < 100){
+        completedPercentage <- 100
+        nMarks <- ifelse(ceiling(previousPercentage) < floor(completedPercentage),
+                         sum((seq(ceiling(previousPercentage),
+                                  floor(completedPercentage), by = 1) %% partialMarkLength == 0)), 0)
+        if (nMarks > 0) {
+          cat(paste(rep("=",nMarks), collapse = ""))
+          previousPercentage <- completedPercentage
+        }
+      }
+      cat("|\n", paste(stopCriteria, nIter, sep = ""),"iteration(s))","\n")
+    }
   }
 
-  alpha <- unlist(lapply(fittedFMMPerComponent, getAlpha))
-  beta <- unlist(lapply(fittedFMMPerComponent, getBeta))
-  omega <- unlist(lapply(fittedFMMPerComponent, getOmega))
+  # linear parameters are recalculated by linear regression; DM is the design matrix
+  DM <- calculateDesignMatrix(alpha = alpha, omega = omega, timePoints = timePoints)
+  coefs <- qr.solve(DM, vData)
+  fittedFMMvalues <- as.numeric(DM %*% coefs)
 
-  # A and M estimates are recalculated by linear regression; cosPhi is the design matrix
-  cosPhi <- calculateCosPhi(alpha = alpha, beta = beta, omega = omega, timePoints = timePoints)
-  linearModel <- lm(vData ~ cosPhi)
-  M <- as.vector(linearModel$coefficients[1])
-  A <- as.vector(linearModel$coefficients[-1])
-  fittedFMMvalues <- predict(linearModel)
+  # A, betas and M estimates
+  M <- coefs[1]
+  for (i in 1:nback) {
+    A[i] = sqrt(coefs[2*i]^2+coefs[2*i+1]^2)
+    beta[i] = atan2(-coefs[2*i+1], coefs[2*i]) %% (2*pi)
+  }
 
   # Residual sum of squares
-  SSE <- sum((fittedFMMvalues - vData)^2)
+  SSE <- sum((vData - fittedFMMvalues)^2)
 
   # Reorder waves by explained variability
-  iPV <- sapply(1:nback, function(x){PV(vData, predict(lm(vData ~ cosPhi[,x])))})
+  iPV <- sapply(1:nback, function(x){PV(vData, predict(lm(vData ~ DM[,c(2*x, 2*x+1)])))})
+
+  iPVF <- iPV*0
   waveOrder<-which.max(iPV)
   while(length(waveOrder)<nback){
-    iPV <- sapply((1:nback)[-waveOrder], function(x){PV(vData, predict(lm(vData ~ cosPhi[,c(waveOrder,x)])))})
+    iPV <- sapply((1:nback)[-waveOrder], function(x){PV(vData, predict(lm(vData ~ DM[,c(2*waveOrder, 2*waveOrder+1, 2*x, 2*x+1)])))})
     waveOrder<-c(waveOrder,(1:nback)[-waveOrder][which.max(iPV)])
   }
-  A <- A[waveOrder]
-  alpha <- alpha[waveOrder]
-  beta <- beta[waveOrder]
-  omega <- omega[waveOrder]
+
+  A <- A[waveOrder]; alpha <- alpha[waveOrder]; beta <- beta[waveOrder]; omega <- omega[waveOrder]
 
   # Returns an object of class FMM.
   return(FMM(

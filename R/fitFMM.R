@@ -132,10 +132,11 @@ fitFMM <- function(vData, nPeriods = 1, timePoints = NULL,
   # 3. Alpha-omega grid definition and precalculations
   alphaGrid <- seqTimes(lengthAlphaGrid)
   if(is.null(omegaGrid)){
-    omegaGrid <- exp(seq(log(omegaMin), log(omegaMax), length.out = lengthOmegaGrid+1))[1:lengthOmegaGrid]
+    omegaGrid <- exp(seq(log(omegaMin), log(omegaMax), length.out = lengthOmegaGrid+2))[2:lengthOmegaGrid]
   }else{
-    omegaGrid <- omegaGrid[omegaGrid>=omegaMin & omegaGrid<=omegaMin]
+    omegaGrid <- omegaGrid[omegaGrid>=omegaMin & omegaGrid<=omegaMax]
   }
+
   gridList <- precalculateBase(alphaGrid = alphaGrid, omegaGrid = omegaGrid, timePoints = timePoints)
 
   # 4. Initial time
@@ -143,6 +144,7 @@ fitFMM <- function(vData, nPeriods = 1, timePoints = NULL,
 
   # 5. Fitting process
   ### fitFMM_unit
+
   if(nback == 1){
     fittedFMM <- fitFMM_unit(vData = summarizedData, timePoints = timePoints,
                              lengthAlphaGrid = lengthAlphaGrid, lengthOmegaGrid = lengthOmegaGrid,
